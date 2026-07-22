@@ -1,0 +1,14 @@
+[Unit]
+Description=helm review-watch — reconcile PR state to ledgers + auto-dispatch unblocked dependents (back door §13)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Adjust to where helm lives on your box (%h = your home dir). Pair with a .timer for a schedule.
+ExecStart=%h/helm/dispatch/review-watch.sh
+Nice=10
+RuntimeMaxSec=35m
+
+[Install]
+WantedBy=default.target

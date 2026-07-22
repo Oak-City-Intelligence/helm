@@ -1,0 +1,13 @@
+profile = "helm"
+# Bounded-search excludes shared across the fleet's repos.
+exclude_globs = [
+  "node_modules/**",
+  "target/**",
+  "dist/**",
+  ".git/**",
+  "**/*.lock",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "**/generated/**",
+  "legacy/**",
+]

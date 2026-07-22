@@ -1,0 +1,11 @@
+# worker isolation dirs (created at runtime in the TARGET repos, but guard here too)
+.helm-worktrees/
+
+# runtime artifacts
+*.log
+dispatch/STOP
+dispatch/NIGHT-REPORT.md
+
+# editor / OS noise
+.DS_Store
+*.swp

@@ -1,0 +1,15 @@
+[Unit]
+Description=helm console — live read-only dashboard over the helm control-plane docs
+After=network.target
+
+[Service]
+# Adjust the path to where helm lives on your box (%h = your home dir).
+ExecStart=/usr/bin/node %h/helm/console/server.js
+Restart=on-failure
+Environment=PORT=8090
+# Loopback only by default. To expose on all interfaces set HOST=0.0.0.0 here — an opt-in for a
+# trusted network only, since the console serves repo files read-only with no auth.
+Environment=HOST=127.0.0.1
+
+[Install]
+WantedBy=default.target

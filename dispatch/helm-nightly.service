@@ -1,0 +1,18 @@
+[Unit]
+Description=helm nightly drain-only fleet dispatch (headless agent run)
+# Only meaningful when the network is up (workers push branches / open PRs).
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Absolute path required — user units don't inherit an interactive shell's PATH.
+# Adjust this to where helm lives on your box (%h = your home dir). Pair with a .timer for a schedule.
+ExecStart=%h/helm/dispatch/night-run.sh
+# The script sets its own HOME/PATH; keep the unit minimal.
+Nice=10
+# A drain shouldn't run forever even if the inner `timeout` is bypassed.
+RuntimeMaxSec=3h
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,7 @@
+# runtime artifacts — regenerated each run, not source
+*.log
+.pr-state.hash
+STOP
+.spend-*.txt
+review-watch.log
+.runs-*

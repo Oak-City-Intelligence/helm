@@ -1,0 +1,47 @@
+# helm project config — example (a FICTIONAL sample project)
+#
+# This project does not exist; it's here so the layout, config shape, and queue lifecycle read
+# end-to-end. Copy it when onboarding a real project and point repo_path/github/worktree_root at yours.
+name: example
+
+# --- Repo location ---
+repo_path: /path/to/your/checkout/pagelet   # the project's primary working checkout (placeholder)
+github: example-org/pagelet                  # owner/name for `gh pr create --repo`
+ssh_alias: github-example                     # the SSH host alias this project's identity pushes through
+
+# --- Branching ---
+default_branch: main
+base_branch: main                            # items branch off this
+worktree_root: /path/to/your/checkout/.helm-worktrees/example   # workers isolate here (placeholder)
+
+# --- Terminal contract ---
+done_via: pr                                 # branch -> verify -> gh pr create into base_branch
+
+# --- Agent tier defaults (item may override; see DOCTRINE §11) ---
+default_model: sonnet
+default_effort: medium
+
+# --- Baseline health gate (DOCTRINE §10): dispatcher runs this on the base commit before dispatch ---
+# MUST mirror the repo's real CI (.github/workflows/*). ci-audit.js flags drift between this and the CI YAMLs.
+baseline_check: |
+  npm ci && npm run typecheck && npm test && npm run build
+
+# CI gate commands intentionally NOT in the pre-flight baseline (ci-audit.js reads this to avoid false drift
+# flags). e.g. an end-to-end job that needs a live browser/service stays out of the hermetic pre-flight.
+baseline_excludes:
+  - test:e2e
+
+# --- Worktree provisioning (optional) — mirror gitignored/pinned deps into a fresh worktree (KNOWN-ISSUES #1).
+# Empty/absent = no-op. Uncomment + adapt only if your deps are gitignored and lock-pinned.
+# worktree_provision:
+#   - rsync -a --delete --exclude='.git' {repo_path}/vendor/ {worktree}/vendor/
+
+# --- Identity (git author + SSH alias a worker commits under; enables identity-isolated projects) ---
+identity:
+  mode: default                              # use the existing global git author
+  ssh_alias: github-example
+
+# --- Carve-outs: paths a worker may NEVER touch (belt; scope_dirs is the per-item allowlist / suspenders) ---
+deny_dirs:
+  - infra/secrets
+  - src/billing        # judgment-heavy money path — attended-only, never a headless drain item

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "example-001",
+    "project": "example",
+    "github": "example-org/pagelet",
+    "base": "main",
+    "branch": "example-001-word-count",
+    "plan": "/path/to/helm/projects/example/plans/example-001.md",
+    "config": "/path/to/helm/projects/example/config.yml",
+    "model": "sonnet"
+  }
+]
