@@ -199,7 +199,7 @@ This maps cleanly onto §8: **Planner** = operator (authors `QUEUE.md`); **Dispa
 (spawns + collects, holds no domain context, can't rot); **Worker** = each agent (fresh, isolated, one item).
 
 **Run-mode status.** Burst (attended) — **BUILT.** Overnight `systemd` burner (**drain-only**) — **BUILT**
-(`dispatch/{night-run.sh, .night-prompt.md, helm-nightly.service, QUEUE.json, RUNMODE.md}`); awaiting the
+(`dispatch/{night-run.sh, night-prompt.md, helm-nightly.service, QUEUE.json, RUNMODE.md}`); awaiting the
 operator's one-time timer install + a stocked `QUEUE.json` before its first real run. Semi-attended live
 `/loop` — convenience only, dies with the session. See `dispatch/RUNMODE.md` for all three.
 
@@ -335,3 +335,137 @@ the work is. Genuine decisions surface as an "Open questions" section with gated
 inversion (§2), applied to authoring. Read-only invariant: no stage touches a target repo's files, branches,
 or history; the only write is the draft file inside helm itself. Model tier follows §11 including the hard
 rules (an observation whose fix will touch irreversible-blast-radius code runs the whole pipeline at top-tier).
+
+## 17. An audit finding ships a guard, not just a fix
+
+> *"I would never do such a tedious and meticulous pass-fail boring walk, so we need to get it done and
+> shore up defense against needing to do a new one every time we make changes."* — the operator, ruling
+
+The pass/fail walk is the fleet's job precisely because the operator will not do it: it is unbounded, dull,
+and it decays the moment anyone commits. That decay is the real enemy. **A one-shot audit buys a snapshot;
+a guard buys the invariant.** So:
+
+**Rule.** When an item fixes something an audit found, it also ships the check that keeps it fixed —
+in the repo, in the gate set, failing loud. Authoring is not done until the spec answers: *what commit,
+made by someone who never read this item, would silently undo it — and what fails when they make it?*
+
+**The shape is proven, not theoretical:**
+- A container base-image bump also shipped a parity guard reading *all* `FROM`s and *all* CI runtime
+  versions, because a partial bump is the likely future error.
+- A two-identity authorization suite also shipped a coverage guard that fails when a new ownership helper
+  appears with neither a test case nor an allowlisted reason.
+- A CI trigger fix was itself gate-widening: it made the gate cover what everyone already assumed it covered.
+
+**Corollary — a guard needs a written escape hatch, not a silent one.** Allowlists carry a required reason
+field. An exclusion nobody can see is how the hole reopens.
+
+**Corollary — prefer the guard that fails at the gate over the doc that asks people to remember.** A line in
+a runbook is not a defense. If the only thing standing between us and a repeat is prose, the item is not done.
+
+**This is also the answer to board rot (§7, and §18 below).** Handovers and BACKLOG entries decay because
+nothing verifies them. Where a claim can be machine-checked, the fix is a check — not a more carefully-worded
+note.
+
+---
+
+## 18. The board is checked, not trusted — `board-audit` at seat start and seat close
+
+§17 says an audit finding ships a guard. §17 was applied to the **repo**. This section applies it to the
+**board**, which is where the rot actually lives.
+
+**Board rot = a board file asserting something that stopped being true, with nothing to catch it.** It is
+not a documentation problem. Every instance costs a worker run or a wrong decision, and every instance is
+silent: one item sat `ready` in three consecutive handovers after it had shipped; four `BLOCKED.md` entries
+stayed in the operator's decision inbox for days after they were answered; a BACKLOG line nearly bought a
+duplicate guard with a rival allowlist. Measured surface on one project the day this section was written:
+its QUEUE carried **107 rows claiming `done → PR #N` and only 53 saying `merged ✅`** — 54 unchecked claims,
+which is exactly the condition that produced the three-handover case.
+
+**The mechanism is not carelessness.** Stamping is manual and split across captains (whoever writes
+`done → PR #N` is rarely whoever should later write `merged ✅`); the board is prose, so nothing can check
+it; and a handover COPIES the previous handover's claim rather than re-deriving it.
+
+**The rule.**
+
+- **Run `node dispatch/board-audit.js` before dispatching anything, and again before writing a handover.**
+  A handover not preceded by a clean — or explicitly-acknowledged — board-audit is how the same stale line
+  survives three seats.
+- The handover carries one line: *board-audit at close: N findings, all resolved / listed as <where>.*
+- Every check is `gh`, `git`, or `curl`. **No model in the loop**, so it costs a command, not a walk.
+
+**What it checks** (each maps to a real rot instance, not a hypothetical):
+
+| # | check | the rot it catches |
+|---|---|---|
+| 1 | every `done → PR #N` row, asked of GitHub | stale stamp (row says merged, PR is open) and unstamped merge |
+| 2 | every `ready`/`queued` row vs the ledger and vs merged branches | dispatching a worker onto shipped work |
+| 3 | every live `BLOCKED.md` entry vs its item's ledger state | the decision inbox lying to the operator |
+| 4 | every `path:line` a BACKLOG/BLOCKED line cites, against `origin/<base>` | a claim anchored to a file that moved or died |
+| 5 | the tracked prod version vs the deployed `/api/health` | a deploy landed and nobody drained the queue |
+| 6 | every LEDGER row still parses (`ledgertool lint`) | **the quietest one.** A row that isn't exactly 5 ` \| `-separated fields is SKIPPED, not errored — the event stops existing and the item silently reverts to its last well-formed row. That is how a shipped item read `ready` for three handovers. `lint` existed but only ran inside helm's own `baseline_check`, so the real project ledgers — where the work actually lives — were linted by nothing, and 48 broken rows accumulated over weeks. |
+
+**Three postures that are load-bearing — do not "improve" them away:**
+
+1. **It never edits a board.** A wrong auto-correction looks authoritative and is worse than a stale line.
+   It prints and exits non-zero; the captain writes. The one mechanical transcription that IS safe —
+   stamping a merge that GitHub confirms — lives in the separate `dispatch/board-stamp.js`, which refuses
+   any PR whose branch or title does not name the item and prints those as SKIPPED-AMBIGUOUS.
+2. **It is captain-invoked, not a daemon.** Whether any helm service runs unattended is a standing operator
+   call (see `STARTUP.md`). This tool exists so board freshness never depends on reopening that decision.
+3. **It reads `origin/<base>`, never a working tree.** Primary checkouts drift — one of ours sat on a stale
+   detached HEAD for weeks — and a checker that reads them produces confident garbage.
+
+**Resolve, don't delete** (this is what keeps the file honest under repeated audits): a rot line is
+rewritten as `[RESOLVED — verified <date>]` with the evidence AND the residual that is still real. Deleting
+a stale line destroys the only trace of what was true about it. `board-audit` is built to match: it skips
+struck-through headings, `<details>`-preserved original blocks, and fenced quoted output, so a properly
+resolved line goes quiet without being erased.
+
+---
+
+## 19. A campaign carries a living document, and handovers serve it
+
+`board-audit` (§18) keeps *status* honest. Nothing keeps *strategy* honest, and strategy is what
+handovers lose.
+
+The failure is structural, not careless. A handover is written from inside the seat that wrote it, so it
+carries what that seat did and what the next seat should do next. It cannot carry why the work exists,
+because that was decided several seats ago by someone who is gone. Six handovers in, the queue is still
+moving, every item passes its gate, and nobody can say which of the campaign's named lacks any of it closes.
+The board is green and the war is drifting.
+
+**When a lane is executing a multi-wave campaign against a written standard, that campaign gets a living
+document, and it is a first-class artifact — not prose in a handover.**
+
+Two files, two jobs, and keeping them separate is the whole mechanism:
+
+- **The standard** (`STANDARD.md`) states what we are trying to become and **does not change**. It is the
+  argument: what we lack, why each lack costs us, what we refuse to do, how we'll know it worked. Editing it
+  to match what we shipped is how a standard becomes a description of the status quo.
+- **The campaign doc** (`CAMPAIGN.md`) states **where we are against it** and changes every seat.
+  Scoreboard per named lack, per standard item, open decisions with resolution state, ordering tripwires,
+  wave map, and a change log with one line per seat.
+
+**The practice, which is the part that actually has to hold:**
+
+1. **Read the campaign doc at seat start, before the queue.** The queue tells you what is ready. The
+   campaign doc tells you whether ready is the same as right.
+2. **Update it at seat close, before writing the handover** — after `board-audit`, same as any board. It is
+   a board: checked, not trusted, and RESOLVE rather than delete (§18 applies to it in full).
+3. **The handover points at it rather than restating it.** A handover that re-summarizes campaign strategy
+   has forked it, and the fork will drift. One line naming the file and what moved.
+4. **Append to the change log every seat, including seats that changed nothing** — say so explicitly. A
+   silent gap is indistinguishable from a seat that forgot, which is the same rot §18 was written for.
+5. **Status is earned in prod, not at merge.** A campaign scoreboard that counts merges is a scoreboard of
+   intentions. Mark a lack closed when it is live and verified.
+
+**Record ordering constraints as tripwires.** The characteristic second-wave failure is not a bad item; it
+is a correct item dispatched in the wrong order — a retrieval file rewritten before there is anything to
+retrieve, a baseline taken after the thing it was meant to measure. Those constraints live in the standard
+as prose and are invisible to a seat reading a queue row. Lift them into the campaign doc as an explicit
+list, each with the resolution taken and the date.
+
+**A finding about the campaign is not a finding about the item.** When execution disproves a premise the
+campaign rests on, the campaign doc is where that goes — the item's plan gets amended, the doc records the
+correction, and the next seat inherits both. Three plans in one day carried premises the repo contradicted;
+each was caught by a worker at execution time, which is the most expensive place to catch it.

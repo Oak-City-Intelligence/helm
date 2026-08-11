@@ -137,10 +137,16 @@ Every piece a mature version needs, mapped to the framework that proves it load-
 | **MTTR (block/baseline-red → resolved)** | DORA | uncomputed | **MISSING** |
 | **Four-keys dashboard + review cadence** | DORA | console panel unbuilt | **MISSING** |
 | Flow efficiency, CFD, aging chart | Kanban | none | **MISSING** |
-| Single source for the 3 queue views | Kanban | ledgertool derives state; drift flagger built | built* |
+| Single source for the 3 queue views | Kanban | ledgertool derives state; drift flagger built | proven |
+| **Board-vs-reality reconcile (status rot)** | GitOps | `board-audit.js` at seat start + handover; `board-stamp.js` writes back GitHub-confirmed merges only | proven |
+| **Pre-dispatch scope check** | Shift-left | `scope-preflight.js`: `scope_dirs` vs `origin/<base>`, gitignored-target trap, consumer enumeration on declared `impact_symbols` | proven |
+| **Plan claim-linting (the other half)** | Shift-left | none — see `IMPROVEMENTS.md` #6 | **MISSING** |
+| **Resource reclamation (worktrees)** | Ops hygiene | `reap-worktrees.sh`, merged+clean only, branches kept | proven |
+| **Cross-realm identity leak guard** | Supply chain | `identity-guard.sh` pre-push; a hit is a hard block | proven |
+| **Read-only audit lanes (findings, not code)** | Verification | `helm-audit.js`: multi-lens auditor + independent skeptic who refutes | proven |
 
-\* `ledgertool.js` (state/lint/drift) and `usage-today.js` are built and exercised but **not bundled in this
-pre-1.0 cut** — see `dispatch/RUNMODE.md`. "built" means the capability exists, not that it ships here.
+\* Everything in the table above now ships in this repo. The remaining unbundled pieces are the
+review-watch runner and the live runtime state files — see `dispatch/RUNMODE.md`.
 
 ### Verification, gates & safety
 | Piece | Source | helm today | Status |

@@ -7,9 +7,10 @@ inside phases; Phase 1 = the foundations everything else leans on. This is helm'
 Legend: **fleet** = drain-safe, could be a QUEUE.json item · **attended** = Captain-run / touches the running
 engine · size ≈ S (hour) / M (session) / L (multi-session).
 
-Note: items below marked ✅ DONE for `ledgertool.js` (#3, #8) and `usage-today.js` (#19) are built and
-exercised, but those two helpers are **not bundled in this pre-1.0 cut** — see `dispatch/RUNMODE.md`. DONE
-here means the capability exists, not that it ships in this release.
+Note: `ledgertool.js` (#3, #8) and `usage-today.js` (#19) were built and exercised before this repo
+existed and were held back from the first cut; **both now ship**, along with the board-audit family, the
+scope preflight, the ledger repair pair, the worktree reaper, and the identity guard. DONE means the
+capability exists and is in the tree.
 
 ## Phase 1 — foundations (unblock everything downstream)
 
@@ -85,9 +86,11 @@ here means the capability exists, not that it ships in this release.
     *attended, S.*
 24. **Verify `DEPLOYMENT.md` against each repo's real CI** — each project's post-merge path is marked
     `(confirm)` until reconciled against its `.github/workflows`. Closes: deploy-path inference. *attended, S.*
-25. **Build a drift-detection reconcile pass (declared plans/QUEUE vs actual PR/branch state)** — the GitOps
-    half helm keeps half-building; surface divergence instead of discovering it at incident time. Closes:
-    drift detection + alerting. *attended, M.*
+25. ◑ **PARTIAL** — **Build a drift-detection reconcile pass (declared plans/QUEUE vs actual PR/branch
+    state).** `dispatch/board-audit.js` now reconciles the declared board against GitHub, the ledger, and
+    `origin/<base>` on every seat, and `board-stamp.js` writes back the one correction that is pure
+    transcription (DOCTRINE §18). STILL OPEN: the alerting half — divergence is surfaced when a captain runs
+    the audit, not pushed when it appears (needs #5's channel). *attended, M.*
 26. **Harden the single-credential path (token expiry alert + fallback identity)** — the gh token blocked
     PRs twice; one box, one user, no rotation. Closes: least-privilege/credential fragility. *attended, S.*
 27. **Version prompts/config + a small eval harness** — behavior changes to the harness are currently
@@ -95,3 +98,29 @@ here means the capability exists, not that it ships in this release.
 28. **Build local-ops machinery (dispatcher + verify contract for local artifact work)** — the second work
     mode (work that runs on the box and produces an artifact/fact, not a PR) has no machinery and no logged
     success. Closes: local-ops mode. *attended, L.*
+
+## Phase 5 — close the grooming gap (the current dominant error source)
+
+See `IMPROVEMENTS.md` for the full backlog and the evidence behind each. The execution side holds; the
+front door is where the error rate lives, so these rank above most polish items.
+
+29. ✅ **DONE** — **Sweep worktrees the loop creates and never collects.** `dispatch/reap-worktrees.sh` reaps
+    only provably-recoverable trees (merged into `origin/<base>`, no modified tracked files, no untracked
+    files beyond what `worktree_provision` creates) and keeps branches. Runs before the nightly drain, so a
+    quiet night still sweeps. *fleet, S.*
+30. ◑ **PARTIAL** — **Pre-dispatch plan checking (IMPROVEMENTS #1/#6/#7).** `dispatch/scope-preflight.js`
+    ships the path half: every ready plan's `scope_dirs` checked against `origin/<base>` for paths that don't
+    exist and for gitignored targets, plus consumer enumeration when the plan declares `impact_symbols`.
+    STILL OPEN: the claim half — a `plan_lint` phase that reads every file the plan names, runs each `verify`
+    selector against the base to prove it can pass and isn't a no-op, and flags any sentence asserting a repo
+    fact it can't confirm with a `file:line`. *attended, M.*
+31. **Feed triage verdicts back to the spec author (IMPROVEMENTS #2)** — drafted specs arrive with a
+    load-bearing false claim about three times in four; the captain re-catches it every wave and the finding
+    dies in captain context. Close the loop so the next drop arrives cleaner. *attended, M.*
+32. **Track audit debt as an object, not a string (IMPROVEMENTS #3)** — `projects/<name>/AUDIT-DEBT.md`, one
+    line per unaudited money-path or validation-surface merge, cleared explicitly when audited. Today the set
+    is reconstructable only by archaeology, and a context compaction loses it. *fleet, S.*
+33. **Red-team the running system on a cadence (IMPROVEMENTS #13)** — build/verify is mechanically solid; an
+    authorization defect that is live in production can pass every existing gate. Make the authenticated
+    probe standing, and land the invariant as a headless smoke so a regression re-appears as a red check.
+    *attended, M.*

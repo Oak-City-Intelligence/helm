@@ -6,14 +6,17 @@ opens PRs. It never authors, never merges, never deploys. Those stay the operato
 
 Throughout, `$HELM_ROOT` is the path to this repo.
 
-> **What's bundled in this pre-1.0 cut:** the burst dispatcher (`helm-dispatch.js`), the gauntlet dispatcher,
-> the intake pipeline, and `ci-audit.js`. Described below for completeness but **not included in this
-> release**: the nightly + review-watch runner scripts (`night-run.sh`, `review-watch.sh`); the ledger/usage
-> helpers (`ledgertool.js`, `usage-today.js`); the headless prompts (`.night-prompt.md`, `.watch-prompt.md`);
-> and the runtime state files the loop reads and writes (`QUEUE.json`, `on-merge.json`, `pr-state.json`). The
-> burst path is the proven, portable core. The service unit files are provided as templates for when you wire
-> your own nightly/review-watch tier; a `QUEUE.sample.json` ships as the shape for the queue you stock
-> yourself.
+> **What's bundled:** the burst dispatcher (`helm-dispatch.js`), the gauntlet dispatcher, the intake
+> pipeline, the read-only audit dispatcher (`helm-audit.js`), the whole check family (`ci-audit.js`,
+> `board-audit.js`, `scope-preflight.js`, `ledgertool.js`), the board writer (`board-stamp.js`), the ledger
+> repair pair, the worktree reaper, the identity guard, the usage meter, and the nightly runner
+> (`night-run.sh` + `night-prompt.md`).
+>
+> Described below for completeness but **not included**: the review-watch runner and its prompt
+> (`review-watch.sh`, `.watch-prompt.md`), and the runtime state files the loop reads and writes
+> (`QUEUE.json`, `on-merge.json`, `pr-state.json`) — those are live operator state, not code. The service
+> unit files are provided as templates for when you wire your own nightly/review-watch tier; a
+> `QUEUE.sample.json` ships as the shape for the queue you stock yourself.
 
 ## The fuel tank — `QUEUE.json`
 
@@ -43,7 +46,7 @@ The orchestrator authors items and invokes `helm-dispatch.js`. One worker per it
 ## 2. Nightly (the autonomous tier) — headless, unattended
 A **systemd user timer** (on a box where cron is disabled) fires `night-run.sh` at a nightly hour. The wrapper:
 - exits immediately if `dispatch/STOP` exists (kill switch) or `QUEUE.json` is empty (no work for no reason);
-- otherwise runs one headless agent on `.night-prompt.md`, which drains the queue drain-only and
+- otherwise runs one headless agent on `night-prompt.md`, which drains the queue drain-only and
   writes `NIGHT-REPORT.md` — the morning briefing.
 
 ### Install (one-time, operator)

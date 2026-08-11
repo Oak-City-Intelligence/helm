@@ -110,7 +110,7 @@ const buildPrompt = (it) => [
   '2. ISOLATE — git worktree in the TARGET repo (repo_path from config, NOT the control-plane repo) on branch ' + it.branch + ' off origin/' + it.base + ', under the config worktree_root. Retry on lock.',
   '3. EXECUTE the plan steps EXACTLY, strictly within scope_dirs. Outside scope_dirs / inside deny_dirs → block.',
   '4. VERIFY — run the item verify command(s); they must exit 0. In-scope unambiguous failure → fix + re-run. Undetermined → block. Capture a short verify_summary.',
-  '5. COMMIT under the project identity. NO AI ATTRIBUTION (harness §5) — subject + body + "helm: ' + it.id + '" trailer only. PUSH the branch. Do NOT open a PR.',
+  '5. COMMIT under the project identity. NO AI ATTRIBUTION (harness §5) — subject + body + the config trailer only (read `commit_trailer`: absent → "helm: ' + it.id + '"; the literal `none` → no trailer). PUSH the branch. Do NOT open a PR.',
   '6. Capture the diff for the reviewers: run `git diff --stat origin/' + it.base + '...' + it.branch + '` and put it in diff_stat.',
   '',
   'Return the structured result: status "built" only if verify passed and the branch is pushed; include worktree_path (absolute) and branch so the reviewers and any fix step operate on the SAME place. status "blocked"/"failed" otherwise. The structured return IS your report.',
@@ -147,7 +147,7 @@ const fixPrompt = (it, build, findings) => [
   'FINDINGS to resolve (JSON):',
   JSON.stringify(findings, null, 2),
   '',
-  'PROCEDURE: re-enter the existing worktree on branch ' + build.branch + '. Fix each finding, staying strictly within scope_dirs. Re-run the item verify (must exit 0). Commit the fixes (NO AI attribution; "helm: ' + it.id + '" trailer) and push. If a finding demands a decision the repo/plan cannot answer, do NOT guess — return status "blocked" with the block_question.',
+  'PROCEDURE: re-enter the existing worktree on branch ' + build.branch + '. Fix each finding, staying strictly within scope_dirs. Re-run the item verify (must exit 0). Commit the fixes (NO AI attribution; the config trailer — `commit_trailer`, absent → "helm: ' + it.id + '", `none` → no trailer) and push. If a finding demands a decision the repo/plan cannot answer, do NOT guess — return status "blocked" with the block_question.',
   '',
   'Return BUILD_SCHEMA: status "built" if all blocker/major findings are fixed and verify is green; "blocked"/"failed" otherwise. Keep worktree_path + branch.',
 ].join('\n')

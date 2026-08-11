@@ -14,6 +14,13 @@ default_branch: main
 base_branch: main                            # items branch off this
 worktree_root: /path/to/your/checkout/.helm-worktrees/example   # workers isolate here (placeholder)
 
+# --- Commit trailer ---
+# `<id>` is substituted with the item id; `none` = NO trailer. Absent = `helm: <id>`.
+# Set `none` when the target repo is PUBLIC: a harness-named trailer on a public commit permanently
+# discloses what built the code, and a push cannot be un-published. The item id already rides the
+# branch name, which is where board-audit/board-stamp match.
+commit_trailer: helm: <id>
+
 # --- Terminal contract ---
 done_via: pr                                 # branch -> verify -> gh pr create into base_branch
 
