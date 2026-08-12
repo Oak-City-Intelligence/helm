@@ -34,10 +34,12 @@ before doing anything.
 5. **No AI attribution.** Never add `Co-Authored-By: Claude`, `Generated with Claude Code`, 🤖 footers, or
    any agent/tool self-credit to commit messages or PR bodies. The operator gets the credit. Write commits
    as a human engineer would — subject, body, and the config's trailer, nothing else.
-   **The trailer is `config.commit_trailer`**, with `<id>` substituted: absent → `helm: <item-id>`;
-   the literal `none` → NO trailer at all. Set `none` for a PUBLIC target repo — a harness-named trailer
-   on a public commit is a permanent, un-retractable disclosure of what built the code, and the item id
-   already rides the branch name, which is where the board tooling actually matches.
+   **The trailer is `config.commit_trailer`**, with `<id>` substituted. Absent or the literal `none`
+   → **NO trailer at all, and that is the default**. There is no prescribed trailer: a project that
+   wants one names its own string in its config. Think hard before setting one on a PUBLIC repo — a
+   trailer naming the machinery that built the code is a permanent, un-retractable disclosure on
+   every commit it touches, and the item id already rides the branch name, which is where the board
+   tooling actually matches.
    **The subject line MUST be a Conventional Commit** — `fix: …`, `feat: …`, `perf: …`, `refactor: …`,
    `chore: …`, `docs: …`, `test: …`, optionally scoped (`fix(api): …`). Use the **same** conventional
    subject as the PR title. This is not cosmetic: a release bot parses these to decide the next version,

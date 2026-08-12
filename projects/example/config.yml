@@ -15,11 +15,18 @@ base_branch: main                            # items branch off this
 worktree_root: /path/to/your/checkout/.helm-worktrees/example   # workers isolate here (placeholder)
 
 # --- Commit trailer ---
-# `<id>` is substituted with the item id; `none` = NO trailer. Absent = `helm: <id>`.
-# Set `none` when the target repo is PUBLIC: a harness-named trailer on a public commit permanently
-# discloses what built the code, and a push cannot be un-published. The item id already rides the
-# branch name, which is where board-audit/board-stamp match.
-commit_trailer: helm: <id>
+# OMITTED (the default) = NO trailer. Commits carry a subject and body and nothing else.
+#
+# There is deliberately no prescribed trailer. A project that wants one names its own string here,
+# and `<id>` is substituted with the item id — the convention is the project's to choose, not this
+# tool's to impose.
+#
+# Think hard before setting one on a PUBLIC repo. A trailer naming the machinery that built the code
+# is a permanent, un-retractable disclosure on every commit it touches, and a push cannot be
+# un-published. The item id already rides the branch name, which is where board-audit and
+# board-stamp actually match — a trailer buys the tooling nothing.
+#
+# commit_trailer: <your-own-string> <id>
 
 # --- Terminal contract ---
 done_via: pr                                 # branch -> verify -> gh pr create into base_branch
