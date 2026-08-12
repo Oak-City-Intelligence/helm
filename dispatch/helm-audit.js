@@ -170,7 +170,7 @@ Read the lane charter's "Done means" (${it.plan}) and satisfy it literally.
 
 Tone: forensic and plain. Be blunt about mechanism, but never overstate what you verified. This report is
 written for the operator, not for publication: if the audited repo is public, a defect that is not yet fixed
-must not be described in anything pushed to it (see `templates/worker-prompt.md` rules 6-7 — the full
+must not be described in anything pushed to it (see \`templates/worker-prompt.md\` rules 6-7 — the full
 mechanism goes in the operator's private record, never in a public PR body).
 
 Return the structured object; the report file is the real artifact.`
