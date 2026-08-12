@@ -12,7 +12,11 @@ ssh_alias: github-example                     # the SSH host alias this project'
 # --- Branching ---
 default_branch: main
 base_branch: main                            # items branch off this
-worktree_root: /path/to/your/checkout/.helm-worktrees/example   # workers isolate here (placeholder)
+worktree_root: /path/to/your/checkout/.worktrees/example   # workers isolate here (placeholder)
+#
+# Keep this directory OUT of the project checkout, or ignore it there. A worktree root that sits
+# untracked and unignored inside a published repo is one `git add -A` away from publishing every
+# in-flight branch, and a name that identifies the harness is worse than a neutral one.
 
 # --- Commit trailer ---
 # OMITTED (the default) = NO trailer. Commits carry a subject and body and nothing else.
@@ -44,6 +48,11 @@ baseline_check: |
 # flags). e.g. an end-to-end job that needs a live browser/service stays out of the hermetic pre-flight.
 baseline_excludes:
   - test:e2e
+
+# --- Deploy board (optional) — the file that tracks merged-but-undeployed work.
+# board-audit CHECK 5 reads the version it claims and compares it against the live /api/health.
+# Absent = the check skips. Name yours here if it differs.
+prod_board: PENDING-PROD.md
 
 # --- Worktree provisioning (optional) — mirror gitignored/pinned deps into a fresh worktree (KNOWN-ISSUES #1).
 # Empty/absent = no-op. Uncomment + adapt only if your deps are gitignored and lock-pinned.

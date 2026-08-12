@@ -47,7 +47,7 @@ The orchestrator authors items and invokes `helm-dispatch.js`. One worker per it
 A **systemd user timer** (on a box where cron is disabled) fires `night-run.sh` at a nightly hour. The wrapper:
 - exits immediately if `dispatch/STOP` exists (kill switch) or `QUEUE.json` is empty (no work for no reason);
 - otherwise runs one headless agent on `night-prompt.md`, which drains the queue drain-only and
-  writes `NIGHT-REPORT.md` — the morning briefing.
+  writes `dispatch/NIGHT-REPORT.md` — the morning briefing.
 
 ### Install (one-time, operator)
 ```bash

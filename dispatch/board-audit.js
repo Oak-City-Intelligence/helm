@@ -373,14 +373,18 @@ function checkPaths(cfg) {
   }
 }
 
-// ================= CHECK 5: PENDING-PROD — is prod still on the version the file claims? =================
+// ================= CHECK 5: is prod still on the version the deploy board claims? =================
+// The board file is named by the lane's config (`prod_board:`) rather than hardcoded, because the
+// file that tracks merged-but-undeployed work is a control-plane document whose name differs per
+// setup — and a check keyed to one installation's filename is dead code in every other one.
 function checkProd(cfg) {
-  const b = board(cfg, 'PENDING-PROD.md')
+  const boardFile = cfg.prod_board || 'PENDING-PROD.md'
+  const b = board(cfg, boardFile)
   if (!b) return
   const txt = b.lines.join('\n')
   const claim = txt.match(/\*\*Current prod:\*\*\s*`?v?([0-9]+\.[0-9]+\.[0-9]+)/)
   const url = txt.match(/https?:\/\/[^\s`)]+\/api\/health/)
-  if (!claim || !url) { notes.push(`${cfg.name}: PENDING-PROD.md has no parseable "Current prod:" version + /api/health URL — prod check skipped`); return }
+  if (!claim || !url) { notes.push(`${cfg.name}: ${boardFile} has no parseable "Current prod:" version + /api/health URL — prod check skipped`); return }
   const raw = trySh('curl', ['-s', '--max-time', '20', url[0]])
   if (!raw) { notes.push(`${cfg.name}: ${url[0]} unreachable — prod check skipped`); return }
   let live = null

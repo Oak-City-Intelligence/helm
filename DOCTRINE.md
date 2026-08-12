@@ -439,10 +439,11 @@ document, and it is a first-class artifact — not prose in a handover.**
 
 Two files, two jobs, and keeping them separate is the whole mechanism:
 
-- **The standard** (`STANDARD.md`) states what we are trying to become and **does not change**. It is the
+- **The standard** (a STANDARD.md you write beside the lane) states what we are trying to become and
+  **does not change**. It is the
   argument: what we lack, why each lack costs us, what we refuse to do, how we'll know it worked. Editing it
   to match what we shipped is how a standard becomes a description of the status quo.
-- **The campaign doc** (`CAMPAIGN.md`) states **where we are against it** and changes every seat.
+- **The campaign doc** (a CAMPAIGN.md beside it) states **where we are against it** and changes every seat.
   Scoreboard per named lack, per standard item, open decisions with resolution state, ordering tripwires,
   wave map, and a change log with one line per seat.
 

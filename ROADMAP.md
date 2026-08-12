@@ -1,8 +1,8 @@
 # helm — Roadmap (gap-closing backlog, highest-impact first)
 
 The concrete, buildable items that close the MISSING/partial gaps in `ARCHITECTURE.md §C`. Ranked by impact
-inside phases; Phase 1 = the foundations everything else leans on. This is helm's own BACKLOG — seed
-`projects/helm/BACKLOG.md` from it once self-hosting stands up.
+inside phases; Phase 1 = the foundations everything else leans on. This is helm's own BACKLOG — seed a
+lane's `BACKLOG.md` from it once helm runs itself as one of its own projects.
 
 Legend: **fleet** = drain-safe, could be a QUEUE.json item · **attended** = Captain-run / touches the running
 engine · size ≈ S (hour) / M (session) / L (multi-session).

@@ -109,7 +109,7 @@ The same `QUEUE.md` is drained by whichever scheduler fits the moment (see `DOCT
 
 ## Quickstart
 1. Read `DOCTRINE.md`, then `dispatch/RUNMODE.md`.
-2. Look at `projects/example/` — its `config.yml`, `QUEUE.md`, `LEDGER.md`, and `plans/example-001.md`
+2. Look at `projects/example/` — its `config.yml`, `QUEUE.md`, `LEDGER.md`, and `projects/example/plans/example-001.md`
    show a full item lifecycle.
 3. Copy `templates/item.md` into `projects/<your-project>/plans/<id>.md` and author an item, honoring the
    authoring guards at the top of that template.

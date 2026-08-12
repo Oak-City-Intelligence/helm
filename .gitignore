@@ -1,5 +1,5 @@
 # worker isolation dirs (created at runtime in the TARGET repos, but guard here too)
-.helm-worktrees/
+.worktrees/
 
 # runtime artifacts
 *.log
