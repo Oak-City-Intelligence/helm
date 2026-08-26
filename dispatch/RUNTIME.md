@@ -62,3 +62,22 @@ them at its `agent` boundary; the doctrine tier is the stable contract, the stri
 
 Node alone will not run these engines. If you are porting helm, the runner is the part you build; the
 engines, doctrine, and templates are what you carry over.
+
+## The agent host
+
+`dispatch/agent-host.js` is a host that closes that gap from a shell. It loads an engine, supplies the
+six globals, and drives each `agent()` call through a local agent binary, so the engines run against
+models on the box with no hosted API in the loop. It is exercised by an offline test suite
+(`dispatch/agent-host.test.js` — 24 tests, no model, no network), the first executable check in this
+tree.
+
+The one-line invocation:
+
+```
+node dispatch/agent-host.js dispatch/helm-dispatch.js --args-file args.json
+```
+
+It requires a local agent binary that the reader must supply — the host does not bundle one. The
+`haiku`/`sonnet`/`opus` tier strings map to default open-weight model tags that ship in the file; a box
+that serves different models remaps any tier with `HELM_AGENT_MODEL_<TIER>` or `--model TIER=TAG`. This
+does not make the engines dependency-free: it moves the dependency from a hosted runtime to a local one.
