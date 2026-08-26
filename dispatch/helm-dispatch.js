@@ -108,6 +108,7 @@ STEPS:
 2. In repo_path: \`git fetch origin ${base}\`. Create a throwaway worktree off \`origin/${base}\` (NOT the local base — the local checkout can be stale/polluted) under worktree_root, e.g. branch name \`_baseline-preflight\`.
 2b. PROVISION (if \`worktree_provision\` is present and non-empty): run each command verbatim, substituting \`{repo_path}\` with the config's repo_path and \`{worktree}\` with the absolute path of the worktree you just created. These provision gitignored/floating deps that a fresh worktree lacks — WITHOUT them the gate phantom-reds (see dispatch/KNOWN-ISSUES.md #1). A provision command failing is a TRANSIENT env failure (retry up to 2×), not a red base. If the list is absent or empty, skip this step.
 3. Run the \`baseline_check\` command(s) verbatim in that worktree. Classify like a worker: a hung/timed-out install or a registry/network blip is TRANSIENT — retry up to 2× before calling it; a genuine gate failure (typecheck/lint/fmt/test/build non-zero) is REAL and means the base is RED.
+3a. A step that TIMES OUT even at the maximum timeout is NOT a red base — the gate failed to finish, which is inconclusive. In that case report green=false with failing_command set to \`TIMEOUT: <the step that timed out>\`, so the operator can tell "the base is broken" from "the check ran out of clock". Say it plainly: a red base and an inconclusive timeout have opposite remedies — a red base needs a fix; an inconclusive timeout needs a longer clock or a warm cache.
 4. Clean up: remove the throwaway worktree (\`git worktree remove --force\`).
 
 Return {green, failing_command, summary}. green=true ONLY if every baseline_check step exited 0. If a REAL gate step failed, green=false and failing_command = the exact step (e.g. "npm run build"), summary = the shortest decisive error line. This is data, not prose.`
@@ -151,6 +152,19 @@ if (SKIP_BASELINE) {
     const grp = groups[k]
     if (r && r.green) {
       greenItems.push(...grp)
+    } else if (r && r.failing_command && r.failing_command.startsWith('TIMEOUT:')) {
+      // A timeout means the gate did not FINISH — inconclusive, not red. Reporting it as red
+      // would block a whole wave of items on a base that was never shown to be broken.
+      const why = `${r.failing_command} — ${r.summary}`
+      log(`INCONCLUSIVE BASE for ${k} — baseline timed out and is NOT red — NOT dispatching ${grp.length} item(s): ${why}`)
+      for (const it of grp) {
+        abortedResults.push({
+          item: it.id,
+          status: 'blocked',
+          block_question: `Base ${it.github || '(local)'}@${it.base} is INCONCLUSIVE, not red — the pre-flight baseline timed out (${why}) and nothing shows the base is broken. Do NOT author a baseline-fix item on the strength of this. Remedies, in order: confirm the base independently and, if green, re-dispatch with the baseline skipped; or re-run the pre-flight on a warm worktree cache. Not dispatched — no worker effort spent.`,
+          ledger_line: `<ts> | ${it.id} | blocked | pre-flight: base inconclusive (timed out, not red: ${why}); not dispatched | -`,
+        })
+      }
     } else {
       const why = r ? `${r.failing_command || 'baseline'} — ${r.summary}` : 'baseline check errored'
       log(`RED BASE for ${k} — NOT dispatching ${grp.length} item(s): ${why}`)
