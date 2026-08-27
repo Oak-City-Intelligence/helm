@@ -73,7 +73,11 @@ function parseArgv (argv) {
       const v = next()
       const eq = v.indexOf('=')
       if (eq < 1) die(`--model wants TIER=TAG, got "${v}"`)
-      out.tiers[v.slice(0, eq)] = v.slice(eq + 1)
+      const tier = v.slice(0, eq)
+      if (!Object.prototype.hasOwnProperty.call(out.tiers, tier)) {
+        die(`unknown tier "${tier}" — valid tiers: ${Object.keys(out.tiers).join(', ')}`)
+      }
+      out.tiers[tier] = v.slice(eq + 1)
     } else if (a === '--toolsets') out.toolsets = next()
     else if (a === '--timeout') out.timeout = Number(next())
     else if (a === '--cwd') out.cwd = next()

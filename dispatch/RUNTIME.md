@@ -68,7 +68,8 @@ same model, because the pre-flight baseline agent runs on `haiku` (`dispatch/hel
 that pins only `sonnet` restarts the model-swap fight at pre-flight.
 
 Both remap forms apply, one per tier: `HELM_AGENT_MODEL_<TIER>` (environment, e.g. `HELM_AGENT_MODEL_SONNET=<tag>`)
-and `--model TIER=TAG` (a host flag, e.g. `--model SONNET=<tag>`).
+and `--model TIER=TAG` (a host flag, e.g. `--model sonnet=<tag>`). Tier names are lowercase; the host refuses an
+unknown name rather than storing it.
 
 The failure signature without pinning: a stage that exhausts its timeout with **zero completed calls**.
 `calls=0` after the full ceiling is eviction, not slowness — no `--timeout` value fixes it.

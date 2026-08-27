@@ -420,3 +420,26 @@ test('a thunk that throws still resolves to null, but the REASON reaches the log
     'the rejected promise must name its reason too')
   g.restore()
 })
+
+// ---------------------------------------------------------------------------- --model tier validation (helm-109)
+
+test('a valid tier pin lands in the tier map, leaving the other defaults intact', () => {
+  const { parseArgv } = require('./agent-host')
+  const out = parseArgv(['dispatch/helm-dispatch.js', '--model', 'sonnet=x'])
+  assert.equal(out.tiers.sonnet, 'x')
+  assert.ok(out.tiers.haiku)
+  assert.ok(out.tiers.opus)
+})
+
+test('an unknown tier name is refused — non-zero exit, the name in the message', () => {
+  const { spawnSync } = require('child_process')
+  const r = spawnSync(process.execPath, [
+    path.join(__dirname, 'agent-host.js'),
+    'dispatch/helm-dispatch.js',
+    '--model', 'SONNET=x',
+    '--dry-run',
+  ], { encoding: 'utf8' })
+  assert.notEqual(r.status, 0)
+  assert.match(r.stderr, /SONNET/)
+  assert.match(r.stderr, /unknown tier/)
+})
