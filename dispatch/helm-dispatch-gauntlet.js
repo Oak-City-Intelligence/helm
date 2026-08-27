@@ -33,7 +33,9 @@ export const meta = {
 }
 
 // HELM_ROOT derived from a config path: <root>/projects/<p>/config.yml → <root>
-const helmRoot = (cfg) => cfg.split('/projects/')[0]
+// lastIndexOf, not first: a checkout that itself lives under a directory called projects is the
+// normal case, and the FIRST match would stop one level too early.
+const helmRoot = (cfg) => cfg.slice(0, cfg.lastIndexOf('/projects/'))
 
 const _args = typeof args === 'string' ? JSON.parse(args) : (args || {})
 const items = _args.items || []
