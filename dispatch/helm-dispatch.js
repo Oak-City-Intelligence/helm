@@ -121,7 +121,10 @@ Return {green, failing_command, summary}. green=true ONLY if every baseline_chec
 phase('Baseline')
 async function checkBaseline(it) {
   const r = await agent(baselinePrompt(it.config, it.github, it.base), {
-    label: `baseline:${it.github.split('/')[1]}@${it.base}`,
+    // A branch-mode lane has no `github` at all (helm-101). Deriving the label from it unguarded
+    // threw a TypeError inside a parallel() thunk, which resolves to null in place — so the item came
+    // back as "baseline agent did not return; Re-run", a permanent defect wearing a transient's mask.
+    label: `baseline:${it.github ? it.github.split('/')[1] : it.id}@${it.base}`,
     phase: 'Baseline',
     // model tiers: 'haiku'=light, 'sonnet'=mid, 'opus'=top (DOCTRINE §11). A host on other models remaps.
     model: 'haiku',
@@ -176,7 +179,7 @@ if (SKIP_BASELINE) {
         abortedResults.push({
           item: it.id,
           status: 'blocked',
-          block_question: `Base ${it.github}@${it.base} is RED (pre-flight baseline failed: ${why}). Fix the baseline first (author a baseline-fix item), then re-dispatch. Not dispatched — no worker effort spent.`,
+          block_question: `Base ${it.github || '(local)'}@${it.base} is RED (pre-flight baseline failed: ${why}). Fix the baseline first (author a baseline-fix item), then re-dispatch. Not dispatched — no worker effort spent.`,
           ledger_line: `<ts> | ${it.id} | blocked | pre-flight: base red (${why}); not dispatched | -`,
         })
       }

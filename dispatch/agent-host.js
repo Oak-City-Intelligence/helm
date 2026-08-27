@@ -305,9 +305,15 @@ function makeGlobals (opts) {
 
   // parallel: a barrier, and it NEVER rejects. A thunk that throws resolves to null in place, which
   // is what the engines' .filter(Boolean) is written against.
+  //
+  // The null is the contract; DISCARDING THE REASON was a defect. An engine bug that throws inside a
+  // thunk became an indistinguishable null, and helm-dispatch reports a null baseline as "the agent
+  // did not return — Re-run", which sends an operator to re-run a deterministic failure forever. The
+  // reason is now logged and the null still lands in place, so no engine's .filter(Boolean) moves.
+  const swallowed = (e) => { log(`parallel: a thunk threw and resolved to null — ${e && e.message ? e.message : e}`); return null }
   const parallel = (thunks) => Promise.all(
     (thunks || []).map((t) => {
-      try { return Promise.resolve(t()).catch(() => null) } catch (_) { return Promise.resolve(null) }
+      try { return Promise.resolve(t()).catch(swallowed) } catch (e) { return Promise.resolve(swallowed(e)) }
     }),
   )
 

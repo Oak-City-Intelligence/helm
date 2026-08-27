@@ -401,3 +401,22 @@ test('heartbeatSeconds 0 emits no heartbeat line', async () => {
   assert.ok(!lines.some((l) => l.includes('in flight')))
   g.restore()
 })
+
+test('a thunk that throws still resolves to null, but the REASON reaches the log', async () => {
+  // The null is the contract every engine's .filter(Boolean) is written against, so it must not move.
+  // Discarding the reason is what cost a seat: a TypeError inside a baseline thunk became an
+  // indistinguishable null, which helm-dispatch reports as "the agent did not return — Re-run", and
+  // no amount of re-running fixes a deterministic throw. Both paths (sync and async) must speak.
+  const g = hostWith(replayBin([{ text: 'ok' }]))
+  const { lines, result } = await captureStderr(async () => g.parallel([
+    () => Promise.resolve('fine'),
+    () => { throw new TypeError("Cannot read properties of undefined (reading 'split')") },
+    () => Promise.reject(new Error('async boom')),
+  ]))
+  assert.deepEqual(result, ['fine', null, null])
+  assert.ok(lines.some((l) => /a thunk threw and resolved to null/.test(l) && /reading 'split'/.test(l)),
+    'the synchronous throw must name its reason')
+  assert.ok(lines.some((l) => /a thunk threw and resolved to null/.test(l) && /async boom/.test(l)),
+    'the rejected promise must name its reason too')
+  g.restore()
+})
