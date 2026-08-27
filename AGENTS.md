@@ -25,7 +25,9 @@ the full contract, including the six globals and how model tiers are remapped on
 
 Useful flags: `--dry-run` prints the prompts and spawns nothing (use it first, always), `--model TIER=TAG`
 repoints one tier, `--timeout SECONDS` bounds each agent, `--cwd PATH` sets every agent's working directory.
-Exit `3` means the engine returned `[]` — it did nothing, which is never success.
+Exit `3` means the engine returned `[]` — it did nothing, which is never success. On a single-GPU box, pin
+every tier before a real run, or expect a stage to starve — see *Single-GPU hosts: pin every tier* in
+`dispatch/RUNTIME.md`.
 
 ## A seat opens on a front, not on a filename
 

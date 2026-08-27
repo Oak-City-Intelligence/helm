@@ -60,6 +60,19 @@ top-level `await` and top-level `return`.
 The strings are the concrete model ids this codebase happened to target. A host on different models remaps
 them at its `agent` boundary; the doctrine tier is the stable contract, the string is not.
 
+### Single-GPU hosts: pin every tier
+
+On a host where the tier models cannot be co-resident — one GPU holding one model at a time — remapping is a
+correctness requirement, not a naming convenience. Pin **all three** tiers to co-resident models, or to the
+same model, because the pre-flight baseline agent runs on `haiku` (`dispatch/helm-dispatch.js:130`): a run
+that pins only `sonnet` restarts the model-swap fight at pre-flight.
+
+Both remap forms apply, one per tier: `HELM_AGENT_MODEL_<TIER>` (environment, e.g. `HELM_AGENT_MODEL_SONNET=<tag>`)
+and `--model TIER=TAG` (a host flag, e.g. `--model SONNET=<tag>`).
+
+The failure signature without pinning: a stage that exhausts its timeout with **zero completed calls**.
+`calls=0` after the full ceiling is eviction, not slowness — no `--timeout` value fixes it.
+
 ## What a host must provide to run the engines
 
 - The globals above, plus top-level `await`/`return` support.
