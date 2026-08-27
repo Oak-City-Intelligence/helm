@@ -2,7 +2,7 @@
 // agent-host — run a helm engine outside the workflow runtime it was written for (helm-005).
 //
 // The three engines (helm-dispatch, helm-intake, helm-dispatch-gauntlet) are plain scripts that call
-// six globals — agent, log, parallel, phase, pipeline, args — and today only one runtime supplies
+// seven globals — agent, log, parallel, phase, pipeline, args, exists — and today only one runtime supplies
 // them. This host supplies them from a shell, so an engine can drive local models on one box with no
 // hosted API in the loop.
 //
@@ -117,7 +117,7 @@ function loadEngine (file) {
   const body = src.replace(/^export\s+(const|let|var|function|class)\s/gm, '$1 ')
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor
   try {
-    return new AsyncFunction('agent', 'log', 'parallel', 'phase', 'pipeline', 'args', body)
+    return new AsyncFunction('agent', 'log', 'parallel', 'phase', 'pipeline', 'args', 'exists', body)
   } catch (e) {
     die(`${file} did not compile as an engine body: ${e.message}`)
   }
@@ -141,6 +141,9 @@ function makeGlobals (opts) {
   const stamp = () => new Date().toTimeString().slice(0, 8)
   const log = (msg) => process.stderr.write(`[${stamp()}] ${msg}\n`)
   const phase = (title) => { currentPhase = title; log(`== ${title}`) }
+  // exists(path) -> boolean: the one filesystem question an engine may ask before it spends a worker.
+  // fs.existsSync and nothing more — no globbing, no reads, no writes. Reading stays the agents' job.
+  const exists = (p) => fs.existsSync(p)
 
   // Heartbeat: one line per interval naming the agents still in flight. unref'd so it never
   // holds the process open, and it stops the moment the last agent finishes.
@@ -326,7 +329,7 @@ function makeGlobals (opts) {
     }),
   )
 
-  return { agent, log, parallel, phase, pipeline, ledger, usageDir }
+  return { agent, log, parallel, phase, pipeline, exists, ledger, usageDir }
 }
 
 // ---------------------------------------------------------------------------- run
@@ -345,7 +348,7 @@ async function main () {
 
   let result
   try {
-    result = await fn(g.agent, g.log, g.parallel, g.phase, g.pipeline, engineArgs)
+    result = await fn(g.agent, g.log, g.parallel, g.phase, g.pipeline, engineArgs, g.exists)
   } catch (e) {
     report(g)
     process.stderr.write(`agent-host: engine threw — ${e.stack || e.message}\n`)

@@ -30,7 +30,9 @@ export const meta = {
 }
 
 // HELM_ROOT derived from a config path: <root>/projects/<p>/config.yml → <root>
-const helmRoot = (cfg) => cfg.split('/projects/')[0]
+// lastIndexOf, not first: a checkout that itself lives under a directory called projects is the
+// normal case, and the FIRST match would stop one level too early.
+const helmRoot = (cfg) => cfg.slice(0, cfg.lastIndexOf('/projects/'))
 
 const _args = typeof args === 'string' ? JSON.parse(args) : (args || {})
 const items = _args.items || []
@@ -131,6 +133,18 @@ for (const it of items) {
   const key = `${it.config}::${it.base}`
   ;(groups[key] = groups[key] || []).push(it)
 }
+
+// Guard (DOCTRINE §17): a prompt that names a missing file fails silently — nothing throws, the
+// agent simply cannot read it, and the run looks fine. The harness path is derived from each
+// item's config path, so assert the derivation once, here at the grouping point, BEFORE the first
+// agent is spawned: fail loudly with the derived path in the message if it does not exist.
+for (const it of items) {
+  const harnessPath = `${helmRoot(it.config)}/templates/worker-prompt.md`
+  if (!exists(harnessPath)) {
+    throw new Error(`harness path derived from ${it.config} does not exist: ${harnessPath}`)
+  }
+}
+
 const greenItems = []
 const abortedResults = []
 // A group is exempt from the pre-flight if it carries a baseline_fix item (DOCTRINE §10 escape hatch): such an

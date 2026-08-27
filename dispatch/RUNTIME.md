@@ -35,6 +35,10 @@ The host makes these available to the script without an import:
 - `parallel(fns)` — take an array of zero-arg async functions, run them concurrently, await them all.
 - `pipeline(items, ...stages)` — run a staged per-item pipeline (the intake engine uses it for
   investigate → skeptic → forge).
+- `exists(path)` — answer one filesystem question before an engine spends a worker: returns
+  `true` if `path` exists and `false` if it does not. It is the host's `fs.existsSync` and nothing
+  more — no globbing, no reads, no writes. Filesystem reading stays the agents' job; this only lets an
+  engine check that a derived path (such as a harness file) is present before it proceeds.
 
 Scripts also `export const meta = { name, description, phases }` for the host to display, and may use
 top-level `await` and top-level `return`.

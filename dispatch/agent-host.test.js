@@ -189,6 +189,27 @@ test('every shipped engine compiles under the host', () => {
   }
 })
 
+test('exists() is injected and answers true for a present path and false for an absent one', () => {
+  const g = makeGlobals({ tiers: {}, toolsets: 'file', timeout: 5, dryRun: true })
+  assert.equal(g.exists(path.join(__dirname, 'agent-host.js')), true)
+  assert.equal(g.exists(path.join(__dirname, 'no-such-file-106')), false)
+})
+
+test('an engine that calls exists() loads and runs (not a load-time death)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'helm-engine-'))
+  const file = path.join(dir, 'guard.js')
+  fs.writeFileSync(file, [
+    "export const meta = { name: 'guard', description: 'd', phases: [{ title: 'P' }] }",
+    'const probe = "/no-such-path-106/probe"',
+    'return exists(probe) ? "present" : "absent"',
+  ].join('\n'))
+
+  const fn = loadEngine(file)   // the previous shape died at load, not run
+  const g = makeGlobals({ tiers: { sonnet: 'fake' }, toolsets: 'file', timeout: 5, dryRun: true })
+  const out = await fn(g.agent, g.log, g.parallel, g.phase, g.pipeline, { items: [] }, g.exists)
+  assert.equal(out, 'absent')
+})
+
 // ---------------------------------------------------------------------------- failure semantics
 
 test('parallel never rejects: a throwing thunk becomes null in place', async () => {
