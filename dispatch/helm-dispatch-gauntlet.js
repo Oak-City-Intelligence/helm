@@ -36,11 +36,23 @@ export const meta = {
 }
 
 // HELM_ROOT derived from a config path: <root>/projects/<p>/config.yml → <root>
-const helmRoot = (cfg) => cfg.split('/projects/')[0]
+// lastIndexOf, not first: a checkout that itself lives under a directory called projects is the
+// normal case, and the FIRST match would stop one level too early (helm-104).
+const helmRoot = (cfg) => cfg.slice(0, cfg.lastIndexOf('/projects/'))
 
 const _args = typeof args === 'string' ? JSON.parse(args) : (args || {})
 const items = _args.items || []
 if (!items.length) { log('no items passed — nothing to dispatch'); return [] }
+
+// Guard (DOCTRINE §17), the same one helm-dispatch carries: a prompt naming a missing harness fails
+// SILENTLY — nothing throws, the agent simply cannot read it, and the run looks fine. Assert the
+// derivation before the first agent is spawned, and fail loudly with the derived path.
+for (const it of items) {
+  const harnessPath = `${helmRoot(it.config)}/templates/worker-prompt.md`
+  if (!exists(harnessPath)) {
+    throw new Error(`harness path derived from ${it.config} does not exist: ${harnessPath}`)
+  }
+}
 
 const BUILD_SCHEMA = {
   type: 'object',
