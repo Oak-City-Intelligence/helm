@@ -10,7 +10,11 @@
 // candidates on a high-stakes protocol and the skeptic killed all nine — including the two that would
 // have mattered most had they been real. An audit that only generates is an audit that inflates.
 //
-//   Workflow({ scriptPath: "<this file>", args: {
+// RUN IT — from a shell, through the agent host (dispatch/RUNTIME.md):
+//   node dispatch/agent-host.js dispatch/helm-audit.js --args-file args.json
+// where args.json carries the payload below. Under a workflow-script runtime that injects the globals
+// itself, the equivalent is:
+//   run({ scriptPath: "<this file>", args: {
 //     lanes: [ { id, lane, plan, report } ],  // plan = the lane's charter file; report = output filename
 //     tree:  "<abs path>",                    // a PINNED, read-only checkout of the audited repo
 //     sha:   "<commit>",                      // what that checkout is pinned to

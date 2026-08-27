@@ -14,7 +14,10 @@
 //                   (never loop, never ship past an unresolved finding).
 //   4. PR         — only when BOTH reviewers are clean; the PR body records that the gauntlet ran + its focus.
 //
-// RUN IT via your agent runtime:  run({ scriptPath: "<this file>", args: { items: [ ... ] } })
+// RUN IT — from a shell, through the agent host (dispatch/RUNTIME.md):
+//   node dispatch/agent-host.js dispatch/helm-dispatch-gauntlet.js --args-file args.json
+// where args.json is { "items": [ ... ] }. Under a workflow-script runtime that injects the globals
+// itself, the equivalent is run({ scriptPath: "<this file>", args: { items: [ ... ] } }).
 // args.items[]: { id, project, github, base, branch, plan, config, model, spec }  (same as helm-dispatch, plus
 //   spec — optional absolute path to the LOCKED spec the scope reviewer judges fidelity against.)
 //

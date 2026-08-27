@@ -8,6 +8,10 @@ handful of globals and runs the script with top-level `await` and top-level `ret
 standalone.
 
 This file states what a host must provide so someone can port the engines onto their own runner.
+**If you only want to RUN one, you do not need to build anything** — `dispatch/agent-host.js` is a
+host that ships in this tree and drives the engines from a shell against models on your own box:
+`node dispatch/agent-host.js dispatch/helm-dispatch.js --args-file args.json`. See *The agent host*
+at the bottom of this file.
 
 ## The run surface
 

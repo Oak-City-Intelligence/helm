@@ -18,8 +18,10 @@
 // READ-ONLY INVARIANT: no stage edits the target repo, creates worktrees/branches, commits, or pushes.
 // The only write in the whole pipeline is the forge writing the draft file inside the control-plane repo.
 //
-// RUN IT via your agent runtime's workflow/script surface:
-//   run({ scriptPath: "<this file>", args: { observations: [ ... ] } })
+// RUN IT — from a shell, through the agent host (dispatch/RUNTIME.md):
+//   node dispatch/agent-host.js dispatch/helm-intake.js --args-file args.json
+// where args.json is { "observations": [ ... ] }. Under a workflow-script runtime that injects the
+// globals itself, the equivalent is run({ scriptPath: "<this file>", args: { observations: [ ... ] } }).
 //
 // args.observations[]: { id, project, config, note, hints, model }
 //   id      — intake id, e.g. "example-intake-editor-lag" (becomes the draft filename)

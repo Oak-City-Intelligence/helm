@@ -5,8 +5,12 @@
 // blocks-rather-than-guesses, isolates in a worktree of the TARGET repo, executes within scope,
 // verifies, commits (NO AI attribution), pushes, and opens a PR. Returns structured results only.
 //
-// RUN IT via your agent runtime's workflow/script surface:
-//   run({ scriptPath: "<this file>", args: { items: [ ... ] } })
+// RUN IT — from a shell, through the agent host (dispatch/RUNTIME.md):
+//   node dispatch/agent-host.js dispatch/helm-dispatch.js --args-file args.json
+// where args.json is { "items": [ ... ] }. Under a workflow-script runtime that injects the globals
+// itself, the equivalent is run({ scriptPath: "<this file>", args: { items: [ ... ] } }).
+// Bare `node dispatch/helm-dispatch.js` does NOT work and never has — the globals are undefined and
+// the top-level `return` is a syntax error outside a host.
 //
 // args.items[]: { id, project, github, base, branch, plan, config, model }
 //   id      — item id, e.g. "example-006"
