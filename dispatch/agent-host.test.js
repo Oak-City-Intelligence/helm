@@ -326,3 +326,57 @@ test('the tier remap reaches hermes as -m, and effort passes straight through as
   assert.equal(passthrough[passthrough.indexOf('-m') + 1], 'flashnext:125b')  // an explicit tag is not a tier
   g.restore()
 })
+
+// ---------------------------------------------------------------------------- narration (helm-105)
+
+// Capture host stderr lines for the duration of fn. The fake hermes child writes to its own piped
+// streams, never process.stderr, so only the host's log() lines are captured.
+async function captureStderr (fn) {
+  const orig = process.stderr.write
+  const lines = []
+  process.stderr.write = (chunk) => { lines.push(String(chunk)); return true }
+  try {
+    const result = await fn()
+    return { lines, result }
+  } finally {
+    process.stderr.write = orig
+  }
+}
+
+test('a per-agent phase emits its header once, not once per agent', async () => {
+  const g = hostWith(replayBin([{ text: 'a' }, { text: 'b' }]))
+  const { lines } = await captureStderr(async () => {
+    await g.agent('x', { phase: 'P' })
+    await g.agent('y', { phase: 'P' })
+  })
+  assert.equal(lines.filter((l) => l.includes('== P')).length, 1)
+  g.restore()
+})
+
+test('start and finish lines bracket a successful agent, and the finish carries outcome + seconds', async () => {
+  const g = hostWith(replayBin([{ text: 'done' }]))
+  const { lines } = await captureStderr(async () => {
+    await g.agent('probe', { label: 'w1' })
+  })
+  assert.ok(lines.some((l) => /w1 start .*model fake-tag/.test(l)))
+  assert.ok(lines.some((l) => /w1 ok \d+s tok=1234/.test(l)))
+  g.restore()
+})
+
+test('a dead agent still emits a finish line, not only successes', async () => {
+  const g = hostWith(replayBin([{ exit: 137, text: 'Killed\n' }]))
+  const { lines } = await captureStderr(async () => {
+    await g.agent('probe', { label: 'dies' })
+  })
+  assert.ok(lines.some((l) => /dies process-died \d+s/.test(l)))
+  g.restore()
+})
+
+test('heartbeatSeconds 0 emits no heartbeat line', async () => {
+  const g = hostWith(replayBin([{ text: 'ok' }]), { heartbeat: 0 })
+  const { lines } = await captureStderr(async () => {
+    await g.agent('probe', { label: 'h' })
+  })
+  assert.ok(!lines.some((l) => l.includes('in flight')))
+  g.restore()
+})

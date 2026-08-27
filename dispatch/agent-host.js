@@ -59,7 +59,7 @@ const MAX_SCHEMA_ATTEMPTS = 3
 // ---------------------------------------------------------------------------- argv
 
 function parseArgv (argv) {
-  const out = { tiers: { ...DEFAULT_TIERS }, toolsets: 'file,terminal', timeout: 1800, dryRun: false }
+  const out = { tiers: { ...DEFAULT_TIERS }, toolsets: 'file,terminal', timeout: 1800, dryRun: false, heartbeat: 30 }
   const rest = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -78,6 +78,7 @@ function parseArgv (argv) {
     else if (a === '--timeout') out.timeout = Number(next())
     else if (a === '--cwd') out.cwd = next()
     else if (a === '--usage-dir') out.usageDir = next()
+    else if (a === '--heartbeat') out.heartbeat = Number(next())
     else if (a === '--dry-run') out.dryRun = true
     else if (a === '-h' || a === '--help') { printHelp(); process.exit(0) }
     else if (a.startsWith('-')) die(`unknown flag ${a}`)
@@ -130,6 +131,9 @@ function makeGlobals (opts) {
   const ledger = []           // one row per agent() call, whatever happened to it
   let currentPhase = null
   let seq = 0
+  const hbSeconds = opts.heartbeat != null ? opts.heartbeat : 30
+  let hbTimer = null
+  const running = {}   // label -> start time, while an agent is in flight
 
   // Local time, deliberately: these lines are read side by side with the model broker's own log,
   // which is journald-local. Two clocks in one screenshot is a correlation the operator has to do
@@ -137,6 +141,18 @@ function makeGlobals (opts) {
   const stamp = () => new Date().toTimeString().slice(0, 8)
   const log = (msg) => process.stderr.write(`[${stamp()}] ${msg}\n`)
   const phase = (title) => { currentPhase = title; log(`== ${title}`) }
+
+  // Heartbeat: one line per interval naming the agents still in flight. unref'd so it never
+  // holds the process open, and it stops the moment the last agent finishes.
+  const startHeartbeat = () => {
+    if (hbSeconds <= 0 || hbTimer) return
+    hbTimer = setInterval(() => {
+      const parts = Object.entries(running).map(([l, t]) => `${l} (${Math.floor((Date.now() - t) / 1000)}s)`)
+      if (parts.length) log(`in flight: ${parts.join(', ')}`)
+    }, hbSeconds * 1000)
+    hbTimer.unref()
+  }
+  const stopHeartbeat = () => { if (hbTimer) { clearInterval(hbTimer); hbTimer = null } }
 
   function tierToTag (tier) {
     if (!tier) return opts.tiers.sonnet
@@ -206,8 +222,21 @@ function makeGlobals (opts) {
     o = o || {}
     const label = o.label || `agent-${seq + 1}`
     const started = Date.now()
+    // (a) a per-agent phase narrates itself: adopt it and emit the header once per phase.
+    if (o.phase && o.phase !== currentPhase) { currentPhase = o.phase; log(`== ${o.phase}`) }
     const row = { label, phase: o.phase || currentPhase, model: tierToTag(o.model), attempts: 0, cost: 0, api_calls: 0, tokens: 0 }
     ledger.push(row)
+
+    // (b) one start line, carrying the label and the resolved model tag (tag, not tier).
+    log(`${label} start · model ${row.model}`)
+    running[label] = started
+    startHeartbeat()
+
+    const finish = (emit) => {
+      if (emit) log(`${row.label} ${row.outcome} ${row.seconds}s tok=${row.tokens} cost=$${row.cost.toFixed(2)}`)
+      delete running[label]
+      if (!Object.keys(running).length) stopHeartbeat()
+    }
 
     let failure = null
     const attempts = o.schema ? MAX_SCHEMA_ATTEMPTS : 1
@@ -221,15 +250,18 @@ function makeGlobals (opts) {
       const r = await runHermes(full, o, attempt)
       accrue(row, r.usage)
 
-      if (r.dry) return o.schema ? null : ''
+       if (r.dry) { finish(false); return o.schema ? null : '' }
       if (r.code !== 0 || !r.text.trim()) {
         row.outcome = r.timedOut ? 'timeout' : 'process-died'
         log(`${label}: hermes exited ${r.code}${r.timedOut ? ' (timeout)' : ''}${r.stderrTail ? ` — ${r.stderrTail}` : ''}`)
+        row.seconds = Math.round((Date.now() - started) / 1000)
+        finish(true)
         return null   // a dead worker is null, not a retry — the engines decide what to do about it
       }
       if (!o.schema) {
         row.outcome = 'ok'
         row.seconds = Math.round((Date.now() - started) / 1000)
+        finish(true)
         return r.text.trim()
       }
 
@@ -249,12 +281,14 @@ function makeGlobals (opts) {
       row.outcome = 'ok'
       row.extracted_by = ex.rule
       row.seconds = Math.round((Date.now() - started) / 1000)
+      finish(true)
       return ex.value
     }
 
     row.outcome = 'schema-exhausted'
     row.seconds = Math.round((Date.now() - started) / 1000)
     log(`${label}: ${attempts} attempts, no valid object — returning null`)
+    finish(true)
     return null
   }
 
