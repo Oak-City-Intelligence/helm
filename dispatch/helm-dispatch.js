@@ -5,8 +5,12 @@
 // blocks-rather-than-guesses, isolates in a worktree of the TARGET repo, executes within scope,
 // verifies, commits (NO AI attribution), pushes, and opens a PR. Returns structured results only.
 //
-// RUN IT via your agent runtime's workflow/script surface:
-//   run({ scriptPath: "<this file>", args: { items: [ ... ] } })
+// RUN IT — from a shell, through the agent host (dispatch/RUNTIME.md):
+//   node dispatch/agent-host.js dispatch/helm-dispatch.js --args-file args.json
+// where args.json is { "items": [ ... ] }. Under a workflow-script runtime that injects the globals
+// itself, the equivalent is run({ scriptPath: "<this file>", args: { items: [ ... ] } }).
+// Bare `node dispatch/helm-dispatch.js` does NOT work and never has — the globals are undefined and
+// the top-level `return` is a syntax error outside a host.
 //
 // args.items[]: { id, project, github, base, branch, plan, config, model }
 //   id      — item id, e.g. "example-006"
@@ -30,7 +34,9 @@ export const meta = {
 }
 
 // HELM_ROOT derived from a config path: <root>/projects/<p>/config.yml → <root>
-const helmRoot = (cfg) => cfg.split('/projects/')[0]
+// lastIndexOf, not first: a checkout that itself lives under a directory called projects is the
+// normal case, and the FIRST match would stop one level too early.
+const helmRoot = (cfg) => cfg.slice(0, cfg.lastIndexOf('/projects/'))
 
 const _args = typeof args === 'string' ? JSON.parse(args) : (args || {})
 const items = _args.items || []
@@ -115,7 +121,10 @@ Return {green, failing_command, summary}. green=true ONLY if every baseline_chec
 phase('Baseline')
 async function checkBaseline(it) {
   const r = await agent(baselinePrompt(it.config, it.github, it.base), {
-    label: `baseline:${it.github.split('/')[1]}@${it.base}`,
+    // A branch-mode lane has no `github` at all (helm-101). Deriving the label from it unguarded
+    // threw a TypeError inside a parallel() thunk, which resolves to null in place — so the item came
+    // back as "baseline agent did not return; Re-run", a permanent defect wearing a transient's mask.
+    label: `baseline:${it.github ? it.github.split('/')[1] : it.id}@${it.base}`,
     phase: 'Baseline',
     // model tiers: 'haiku'=light, 'sonnet'=mid, 'opus'=top (DOCTRINE §11). A host on other models remaps.
     model: 'haiku',
@@ -131,6 +140,18 @@ for (const it of items) {
   const key = `${it.config}::${it.base}`
   ;(groups[key] = groups[key] || []).push(it)
 }
+
+// Guard (DOCTRINE §17): a prompt that names a missing file fails silently — nothing throws, the
+// agent simply cannot read it, and the run looks fine. The harness path is derived from each
+// item's config path, so assert the derivation once, here at the grouping point, BEFORE the first
+// agent is spawned: fail loudly with the derived path in the message if it does not exist.
+for (const it of items) {
+  const harnessPath = `${helmRoot(it.config)}/templates/worker-prompt.md`
+  if (!exists(harnessPath)) {
+    throw new Error(`harness path derived from ${it.config} does not exist: ${harnessPath}`)
+  }
+}
+
 const greenItems = []
 const abortedResults = []
 // A group is exempt from the pre-flight if it carries a baseline_fix item (DOCTRINE §10 escape hatch): such an
@@ -158,7 +179,7 @@ if (SKIP_BASELINE) {
         abortedResults.push({
           item: it.id,
           status: 'blocked',
-          block_question: `Base ${it.github}@${it.base} is RED (pre-flight baseline failed: ${why}). Fix the baseline first (author a baseline-fix item), then re-dispatch. Not dispatched — no worker effort spent.`,
+          block_question: `Base ${it.github || '(local)'}@${it.base} is RED (pre-flight baseline failed: ${why}). Fix the baseline first (author a baseline-fix item), then re-dispatch. Not dispatched — no worker effort spent.`,
           ledger_line: `<ts> | ${it.id} | blocked | pre-flight: base red (${why}); not dispatched | -`,
         })
       }
