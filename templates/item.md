@@ -71,6 +71,16 @@ that leaves any required field vague. Hand-authored only — no field is "figure
 >     noise — if the linter is noisy, scope around *that check*, but keep `format:check`, `typecheck`,
 >     `build`, `test`. One pair of items omitted the formatter check from `verify`; CI's formatting gate then
 >     red-lit main post-merge. A gate you skip in verify is a gate CI enforces behind your back.
+> 17. **A `verify` must FAIL on the base and pass after the change.** A gate that is green on unfixed code
+>     measures nothing about the item. The mechanical test — "would it still pass if the fix were deleted?"
+>     If yes, it is not a gate. Earned twice: helm-108's verify asserted the documented flag's strings were
+>     present in the file — true on the base and true after the fix, while the flag itself did nothing until
+>     helm-109; the talkrec Windows intake draft gated a Windows-only import crash with a Linux import that
+>     passes identically before and after the fix. Exception: a pure-documentation item whose deliverable IS
+>     the text may use a presence check, but it must state in the item what remains unchecked, because a
+>     presence check cannot read prose for truth (IMPROVEMENTS #16). The cheap way to satisfy the rule: run
+>     the verify against `origin/<base>` before dispatch and confirm it exits non-zero — guard 14 asks for
+>     a dry-run of the command's form; this asks additionally for its verdict on the base.
 
 ```yaml
 id: <name>-NNN            # e.g. example-001
